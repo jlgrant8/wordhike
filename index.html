@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="WordHike" />
+  <meta name="theme-color" content="#1a2e1a" />
+  <title>WordHike</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design tokens ────────────────────────────────────── */
+    :root {
+      --forest:   #1a2e1a;
+      --moss:     #2d4a2d;
+      --fern:     #4a7c59;
+      --sage:     #8aab8a;
+      --mist:     #d4e8d4;
+      --cream:    #f5f0e8;
+      --gold:     #c8a84b;
+      --rust:     #8b4a2a;
+      --sky:      #7ab8d4;
+
+      --text-primary:   var(--cream);
+      --text-secondary: var(--mist);
+      --text-dim:       var(--sage);
+
+      --radius:   16px;
+      --radius-sm: 10px;
+      --shadow:   0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ── Reset ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--forest);
+      color: var(--text-primary);
+      font-family: 'Source Serif 4', Georgia, serif;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* ── Animated background ──────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(74,124,89,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(26,46,26,0.8) 0%, transparent 50%),
+        radial-gradient(ellipse at 60% 80%, rgba(45,74,45,0.3) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    #app {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: env(safe-area-inset-top, 16px) 20px env(safe-area-inset-bottom, 20px);
+    }
+
+    /* ── Screens ──────────────────────────────────────────── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      animation: fadeIn 0.35s ease;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Loading screen ───────────────────────────────────── */
+    #screen-loading {
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .loading-icon {
+      font-size: 48px;
+      animation: sway 2s ease-in-out infinite;
+    }
+    @keyframes sway {
+      0%, 100% { transform: rotate(-5deg); }
+      50%       { transform: rotate(5deg); }
+    }
+
+    .loading-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+    }
+
+    .loading-sub {
+      font-size: 14px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .loading-bar-wrap {
+      width: 200px;
+      height: 3px;
+      background: var(--moss);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      animation: loadBar 1.5s ease-in-out infinite;
+    }
+    @keyframes loadBar {
+      0%   { width: 0%; margin-left: 0; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* ── Home screen ──────────────────────────────────────── */
+    #screen-home {
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      text-align: center;
+    }
+
+    .home-icon { font-size: 56px; }
+
+    .home-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      color: var(--gold);
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+    }
+
+    .home-sub {
+      font-size: 14px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .score-badge {
+      background: var(--moss);
+      border: 1px solid var(--fern);
+      border-radius: 50px;
+      padding: 10px 24px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .score-badge span {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+    .btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Source Serif 4', serif;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 18px 32px;
+      transition: transform 0.12s, opacity 0.12s;
+      width: 100%;
+      letter-spacing: 0.02em;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--forest);
+      font-weight: 600;
+    }
+
+    .btn-secondary {
+      background: var(--moss);
+      color: var(--text-secondary);
+      border: 1px solid var(--fern);
+    }
+
+    .btn-hint {
+      background: transparent;
+      border: 1px solid var(--fern);
+      color: var(--sage);
+      font-size: 15px;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      width: auto;
+    }
+    .btn-hint.used {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(200,168,75,0.1);
+    }
+    .btn-hint:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    /* ── Game screen ──────────────────────────────────────── */
+    #screen-game {
+      gap: 0;
+    }
+
+    /* Header */
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0 16px;
+      flex-shrink: 0;
+    }
+
+    .game-score {
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .game-score strong {
+      color: var(--gold);
+      font-size: 20px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .game-progress-wrap {
+      flex: 1;
+      height: 3px;
+      background: var(--moss);
+      border-radius: 2px;
+      margin: 0 16px;
+      overflow: hidden;
+    }
+    .game-progress-bar {
+      height: 100%;
+      background: var(--fern);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .btn-quit {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    /* Definition card */
+    .definition-card {
+      background: var(--moss);
+      border: 1px solid rgba(138,171,138,0.2);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .definition-card::before {
+      content: '"';
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      font-family: 'Playfair Display', serif;
+      font-size: 80px;
+      color: rgba(138,171,138,0.15);
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .pos-tag {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--sky);
+      background: rgba(122,184,212,0.15);
+      border: 1px solid rgba(122,184,212,0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+      margin-bottom: 12px;
+    }
+
+    .definition-text {
+      font-size: 19px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      font-style: italic;
+      font-weight: 300;
+    }
+
+    /* Hints area */
+    .hints-area {
+      flex-shrink: 0;
+      margin-bottom: 16px;
+    }
+
+    .hints-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .hints-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hints-revealed {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      min-height: 0;
+    }
+
+    .hint-chip {
+      background: rgba(200,168,75,0.12);
+      border: 1px solid rgba(200,168,75,0.3);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 14px;
+      color: var(--gold);
+      animation: chipIn 0.2s ease;
+    }
+    @keyframes chipIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .hint-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-right: 4px;
+    }
+
+    /* Input area */
+    .input-area {
+      flex-shrink: 0;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    .answer-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid var(--fern);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      padding: 16px 20px;
+      text-align: center;
+      letter-spacing: 0.08em;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+      margin-bottom: 12px;
+    }
+    .answer-input::placeholder { color: var(--text-dim); font-size: 18px; font-family: 'Source Serif 4', serif; font-style: italic; }
+    .answer-input:focus { border-color: var(--gold); }
+    .answer-input.correct { border-color: #6abf6a; background: rgba(106,191,106,0.08); }
+    .answer-input.wrong   { border-color: var(--rust); background: rgba(139,74,42,0.08); animation: shake 0.35s ease; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-8px); }
+      60%       { transform: translateX(8px); }
+    }
+
+    .feedback-text {
+      text-align: center;
+      font-size: 15px;
+      min-height: 22px;
+      margin-bottom: 12px;
+      transition: opacity 0.2s;
+    }
+    .feedback-text.correct { color: #6abf6a; }
+    .feedback-text.wrong   { color: var(--rust); }
+
+    /* ── Result screen ────────────────────────────────────── */
+    #screen-result {
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      text-align: center;
+    }
+
+    .result-emoji { font-size: 64px; }
+
+    .result-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      color: var(--gold);
+    }
+
+    .result-score-box {
+      background: var(--moss);
+      border: 1px solid var(--fern);
+      border-radius: var(--radius);
+      padding: 24px 40px;
+      width: 100%;
+    }
+
+    .result-score-label {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .result-score-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 56px;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .result-score-total {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .result-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    /* ── Utility ──────────────────────────────────────────── */
+    .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Loading -->
+  <div id="screen-loading" class="screen active">
+    <div class="loading-icon">🌿</div>
+    <div class="loading-title">WordHike</div>
+    <div class="loading-sub">Loading your word list…</div>
+    <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  </div>
+
+  <!-- Home -->
+  <div id="screen-home" class="screen">
+    <div class="home-icon">🥾</div>
+    <div>
+      <div class="home-title">WordHike</div>
+      <div class="home-sub">Build your vocabulary on the trail</div>
+    </div>
+    <div class="score-badge">All-time score: <span id="home-score">0</span></div>
+    <div style="width:100%; display:flex; flex-direction:column; gap:12px;">
+      <button class="btn btn-primary" onclick="startGame()">Start Hike</button>
+      <button class="btn btn-secondary" onclick="startGame(true)">Shuffle All Words</button>
+    </div>
+  </div>
+
+  <!-- Game -->
+  <div id="screen-game" class="screen">
+    <div class="game-header">
+      <div class="game-score"><strong id="score-display">0</strong><br>points</div>
+      <div class="game-progress-wrap">
+        <div class="game-progress-bar" id="progress-bar" style="width:0%"></div>
+      </div>
+      <button class="btn-quit" onclick="quitGame()" title="Quit">✕</button>
+    </div>
+
+    <div class="definition-card">
+      <div class="pos-tag" id="pos-tag">noun</div>
+      <div class="definition-text" id="definition-text">Loading definition…</div>
+    </div>
+
+    <div class="hints-area">
+      <div class="hints-label">Hints</div>
+      <div class="hints-buttons">
+        <button class="btn-hint" id="hint-letter"    onclick="revealHint('letter')">First Letter</button>
+        <button class="btn-hint" id="hint-syllables" onclick="revealHint('syllables')">Syllables</button>
+        <button class="btn-hint" id="hint-synonyms"  onclick="revealHint('synonyms')">Synonyms</button>
+      </div>
+      <div class="hints-revealed" id="hints-revealed"></div>
+    </div>
+
+    <div class="input-area">
+      <div class="feedback-text" id="feedback-text"></div>
+      <input
+        type="text"
+        id="answer-input"
+        class="answer-input"
+        placeholder="type the word…"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="none"
+        spellcheck="false"
+        onkeydown="handleKey(event)"
+      />
+      <button class="btn btn-primary" onclick="submitAnswer()">Submit</button>
+      <button class="btn btn-secondary" id="btn-giveup" onclick="giveUp()" style="margin-top:8px;">Show Word</button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="screen-result" class="screen">
+    <div class="result-emoji" id="result-emoji">🏔️</div>
+    <div class="result-title" id="result-title">Hike Complete!</div>
+    <div class="result-score-box">
+      <div class="result-score-label">Score this hike</div>
+      <div class="result-score-number" id="result-score">0</div>
+      <div class="result-score-total" id="result-total">out of 10 words</div>
+    </div>
+    <div class="result-buttons">
+      <button class="btn btn-primary"    onclick="startGame()">Hike Again</button>
+      <button class="btn btn-secondary"  onclick="showScreen('home')">Home</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let allWords      = [];
+let queue         = [];
+let current       = null;
+let sessionScore  = 0;
+let allTimeScore  = 0;
+let wordIndex     = 0;
+const WORDS_PER_SESSION = 10;
+const POINTS_NO_HINT    = 3;
+const POINTS_WITH_HINT  = 1;
+const SKIP_PENALTY      = 0;
+
+// ── Screens ──────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ── Storage ──────────────────────────────────────────────────
+function saveScore() {
+  try { localStorage.setItem('wh_score', allTimeScore); } catch(e) {}
+}
+function loadScore() {
+  try { return parseInt(localStorage.getItem('wh_score') || '0', 10); } catch(e) { return 0; }
+}
+
+// ── Load vocab_data.json ─────────────────────────────────────
+async function loadWords() {
+  try {
+    const res = await fetch('vocab_data.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allWords = await res.json();
+    allTimeScore = loadScore();
+    document.getElementById('home-score').textContent = allTimeScore;
+    showScreen('home');
+  } catch (err) {
+    document.querySelector('#screen-loading .loading-sub').textContent =
+      '⚠️ Could not load vocab_data.json — make sure it\'s in the same folder.';
+    console.error(err);
+  }
+}
+
+// ── Game logic ───────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startGame(fullShuffle = false) {
+  sessionScore = 0;
+  wordIndex    = 0;
+  const pool   = shuffle([...allWords]);
+  queue        = pool.slice(0, WORDS_PER_SESSION);
+  showScreen('game');
+  nextWord();
+}
+
+function nextWord() {
+  if (wordIndex >= queue.length) {
+    endGame();
+    return;
+  }
+
+  current = queue[wordIndex];
+
+  // Pick one definition to show (prefer variety — cycle through pos)
+  const defs = current.definitions;
+  const def  = defs[wordIndex % defs.length] || defs[0];
+
+  document.getElementById('pos-tag').textContent          = def.pos;
+  document.getElementById('definition-text').textContent  = def.definition;
+  document.getElementById('hints-revealed').innerHTML     = '';
+  document.getElementById('feedback-text').textContent    = '';
+  document.getElementById('feedback-text').className      = 'feedback-text';
+
+  const input = document.getElementById('answer-input');
+  input.value     = '';
+  input.className = 'answer-input';
+
+  // Reset hint buttons
+  ['letter','syllables','synonyms'].forEach(h => {
+    const btn = document.getElementById('hint-' + h);
+    btn.classList.remove('used');
+    btn.disabled = false;
+  });
+
+  // Check clues availability
+  const clues = current.clues || {};
+  if (!clues.synonyms || clues.synonyms.length === 0)
+    document.getElementById('hint-synonyms').disabled = true;
+
+  updateProgress();
+  setTimeout(() => input.focus(), 100);
+}
+
+function updateProgress() {
+  const pct = (wordIndex / queue.length) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('score-display').textContent = sessionScore;
+}
+
+// ── Hints ────────────────────────────────────────────────────
+const hintsUsed = new Set();
+
+function revealHint(type) {
+  const clues = current.clues || {};
+  const btn   = document.getElementById('hint-' + type);
+  const area  = document.getElementById('hints-revealed');
+
+  btn.classList.add('used');
+  btn.disabled = true;
+  hintsUsed.add(type);
+
+  let chip = document.createElement('div');
+  chip.className = 'hint-chip';
+
+  if (type === 'letter') {
+    chip.innerHTML = `<span class="hint-label">First letter:</span>${(current.word[0] || '?').toUpperCase()}`;
+  } else if (type === 'syllables') {
+    const s = clues.syllables;
+    chip.innerHTML = `<span class="hint-label">Syllables:</span>${s !== null && s !== undefined ? s : '?'}`;
+  } else if (type === 'synonyms') {
+    const syns = (clues.synonyms || []).slice(0, 3).join(', ');
+    chip.innerHTML = `<span class="hint-label">Synonyms:</span>${syns || '—'}`;
+  }
+
+  area.appendChild(chip);
+}
+
+// ── Answer ───────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter') submitAnswer();
+}
+
+function normalise(str) {
+  return str.trim().toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function submitAnswer() {
+  const input    = document.getElementById('answer-input');
+  const feedback = document.getElementById('feedback-text');
+  const answer   = normalise(input.value);
+  const correct  = normalise(current.word);
+
+  if (!answer) return;
+
+  const usedAHint = hintsUsed.size > 0;
+
+  if (answer === correct) {
+    const pts = usedAHint ? POINTS_WITH_HINT : POINTS_NO_HINT;
+    sessionScore += pts;
+    allTimeScore += pts;
+    saveScore();
+
+    input.className  = 'answer-input correct';
+    feedback.textContent = usedAHint
+      ? `✓ Correct! +${pts} point`
+      : `✓ Correct! +${pts} points`;
+    feedback.className = 'feedback-text correct';
+
+    wordIndex++;
+    hintsUsed.clear();
+    setTimeout(nextWord, 900);
+
+  } else {
+    input.className    = 'answer-input wrong';
+    feedback.textContent = `✗ Try again`;
+    feedback.className  = 'feedback-text wrong';
+    setTimeout(() => {
+      input.className = 'answer-input';
+      input.value = '';
+    }, 600);
+  }
+}
+
+function quitGame() {
+  if (confirm('End this hike?')) endGame();
+}
+
+// ── End game ─────────────────────────────────────────────────
+function endGame() {
+  const total   = wordIndex; // words attempted
+  const pct     = total > 0 ? sessionScore / (total * POINTS_NO_HINT) : 0;
+
+  let emoji = '🌱';
+  let title = 'Keep Hiking!';
+  if (pct >= 0.9)      { emoji = '🏔️'; title = 'Summit Reached!'; }
+  else if (pct >= 0.7) { emoji = '🌲'; title = 'Great Trail!'; }
+  else if (pct >= 0.5) { emoji = '🥾'; title = 'Good Hike!'; }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-score').textContent = sessionScore;
+  document.getElementById('result-total').textContent =
+    `from ${total} word${total !== 1 ? 's' : ''}  ·  all-time: ${allTimeScore}`;
+  document.getElementById('home-score').textContent = allTimeScore;
+
+  showScreen('result');
+}
+
+// ── Give up ─────────────────────────────────────────────
+function giveUp() {
+  const input    = document.getElementById("answer-input");
+  const feedback = document.getElementById("feedback-text");
+  const btn      = document.getElementById("btn-giveup");
+
+  feedback.textContent = `The word was: ${current.word}`;
+  feedback.className   = "feedback-text wrong";
+  input.value          = current.word;
+  input.className      = "answer-input wrong";
+  input.disabled       = true;
+  btn.disabled         = true;
+  document.querySelector(".btn-primary").disabled = true;
+  hintsUsed.clear();
+  wordIndex++;
+  setTimeout(() => {
+    input.disabled = false;
+    document.querySelector(".btn-primary").disabled = false;
+    nextWord();
+  }, 2000);
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+loadWords();
+</script>
+</body>
+</html>

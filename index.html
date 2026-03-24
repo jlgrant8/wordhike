@@ -421,19 +421,6 @@
       20%       { transform: translateX(-8px); }
       60%       { transform: translateX(8px); }
     }
-    @supports (-webkit-touch-callout: none) {
-      #app {
-        height: -webkit-fill-available;
-      }
-    }
-    @supports (-webkit-touch-callout: none) {
-      .input-area {
-        position: sticky;
-        bottom: 0;
-        background: var(--forest);
-        padding-bottom: 8px;
-      }
-    }
 
     .feedback-text {
       text-align: center;
@@ -517,7 +504,7 @@
     <div class="home-icon">🥾</div>
     <div>
       <div class="home-title">WordHike</div>
-      <div class="home-sub">Buildggg your vocabulary on the trail</div>
+      <div class="home-sub">Build your vocabulary on the trail</div>
     </div>
     <div class="score-badge">All-time score: <span id="home-score">0</span></div>
     <div style="width:100%; display:flex; flex-direction:column; gap:12px;">
@@ -565,6 +552,7 @@
         autocapitalize="none"
         spellcheck="false"
         onkeydown="handleKey(event)"
+        onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"
       />
       <button class="btn btn-primary" id="btn-submit" onclick="submitAnswer()">Submit</button>
       <button class="btn btn-secondary" id="btn-giveup" onclick="giveUp()" style="margin-top:8px;">Show Word</button>

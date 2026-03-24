@@ -421,6 +421,11 @@
       20%       { transform: translateX(-8px); }
       60%       { transform: translateX(8px); }
     }
+    @supports (-webkit-touch-callout: none) {
+      #app {
+        height: -webkit-fill-available;
+      }
+    }
     /* @supports (-webkit-touch-callout: none) {
       .input-area {
         position: sticky;

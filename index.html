@@ -421,6 +421,14 @@
       20%       { transform: translateX(-8px); }
       60%       { transform: translateX(8px); }
     }
+    @supports (-webkit-touch-callout: none) {
+      .input-area {
+        position: sticky;
+        bottom: 0;
+        background: var(--forest);
+        padding-bottom: 8px;
+      }
+    }
 
     .feedback-text {
       text-align: center;

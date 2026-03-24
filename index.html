@@ -175,7 +175,7 @@
       color: var(--gold);
       font-weight: 600;
     }
-
+    
     /* ── Buttons ──────────────────────────────────────────── */
     .btn {
       border: none;
@@ -194,12 +194,21 @@
       background: var(--gold);
       color: var(--forest);
       font-weight: 600;
+      display: flex; /* Enables flexbox on the button */
+      justify-content: center; /* Centers content horizontally */
+      align-items: center; /* Centers content vertically */
+      height: 50px
+      
     }
 
     .btn-secondary {
       background: var(--moss);
       color: var(--text-secondary);
       border: 1px solid var(--fern);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 50px
     }
 
     .btn-hint {
@@ -210,6 +219,10 @@
       padding: 12px 20px;
       border-radius: var(--radius-sm);
       width: auto;
+      display: flex; /* Enables flexbox on the button */
+      justify-content: center; /* Centers content horizontally */
+      align-items: center; /* Centers content vertically */
+      height: 20px
     }
     .btn-hint.used {
       border-color: var(--gold);
@@ -311,7 +324,7 @@
     }
 
     .definition-text {
-      font-size: 19px;
+      font-size: 18px;
       line-height: 1.55;
       color: var(--text-secondary);
       font-style: italic;
@@ -389,7 +402,7 @@
       border-radius: var(--radius);
       color: var(--text-primary);
       font-family: 'Playfair Display', serif;
-      font-size: 26px;
+      font-size: 20px;
       padding: 16px 20px;
       text-align: center;
       letter-spacing: 0.08em;
@@ -397,6 +410,7 @@
       transition: border-color 0.2s;
       -webkit-appearance: none;
       margin-bottom: 12px;
+      height: 50px;
     }
     .answer-input::placeholder { color: var(--text-dim); font-size: 18px; font-family: 'Source Serif 4', serif; font-style: italic; }
     .answer-input:focus { border-color: var(--gold); }

@@ -318,6 +318,14 @@
       font-weight: 300;
     }
 
+    .sentence-text {
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+
+
     /* Hints area */
     .hints-area {
       flex-shrink: 0;
@@ -370,7 +378,8 @@
     .input-area {
       flex-shrink: 0;
       margin-top: auto;
-      padding-top: 12px;
+      /* padding-top: 12px; */
+      padding-bottom: 100px;
     }
 
     .answer-input {
@@ -504,6 +513,8 @@
     <div class="definition-card">
       <div class="pos-tag" id="pos-tag">noun</div>
       <div class="definition-text" id="definition-text">Loading definition…</div>
+      <br><hr><br>
+      <div class="sentence-text" id="sentence-text">Loading sentence…</div>
     </div>
 
     <div class="hints-area">
@@ -529,7 +540,7 @@
         spellcheck="false"
         onkeydown="handleKey(event)"
       />
-      <button class="btn btn-primary" onclick="submitAnswer()">Submit</button>
+      <button class="btn btn-primary" id="btn-submit" onclick="submitAnswer()">Submit</button>
       <button class="btn btn-secondary" id="btn-giveup" onclick="giveUp()" style="margin-top:8px;">Show Word</button>
     </div>
   </div>
@@ -553,6 +564,7 @@
 
 <script>
 // ── State ────────────────────────────────────────────────────
+let usedWords = loadUsedWords();
 let allWords      = [];
 let queue         = [];
 let current       = null;
@@ -577,6 +589,13 @@ function saveScore() {
 function loadScore() {
   try { return parseInt(localStorage.getItem('wh_score') || '0', 10); } catch(e) { return 0; }
 }
+function loadUsedWords() {
+  try { return new Set(JSON.parse(localStorage.getItem('wh_used') || '[]')); } catch(e) { return new Set(); }
+}
+function saveUsedWords() {
+  try { localStorage.setItem('wh_used', JSON.stringify([...usedWords])); } catch(e) {}
+}
+
 
 // ── Load vocab_data.json ─────────────────────────────────────
 async function loadWords() {
@@ -606,8 +625,17 @@ function shuffle(arr) {
 function startGame(fullShuffle = false) {
   sessionScore = 0;
   wordIndex    = 0;
-  const pool   = shuffle([...allWords]);
-  queue        = pool.slice(0, WORDS_PER_SESSION);
+  givingUp     = false;
+  hintsUsed    = new Set();
+
+  // If all words used, start fresh
+  if (usedWords.size >= allWords.length) {
+    usedWords = new Set();
+    saveUsedWords();
+  }
+
+  const pool = shuffle(allWords.filter(w => !usedWords.has(w.word)));
+  queue = pool.slice(0, WORDS_PER_SESSION);
   showScreen('game');
   nextWord();
 }
@@ -624,15 +652,29 @@ function nextWord() {
   const defs = current.definitions;
   const def  = defs[wordIndex % defs.length] || defs[0];
 
+  // Extract sentence for the pos associated with definition
+  const sens = current.sentences;
+
+  const sen  = sens.find(s => s.pos === def.pos) || sens[0];
+  const blank = '_'.repeat(current.word.length);
+  const stem = current.word.replace(/(?:ing|ed|s|er|est|ly|ion|tion|ation)$/i, '');
+  const display = sen?.sentence ? `"${sen.sentence.replace(new RegExp(stem + '[a-z]*', 'gi'), blank)}"` : '';
+  const cleanDef = def.definition.replace(new RegExp(stem + '[a-z]*\\b', 'gi'), blank);
+
   document.getElementById('pos-tag').textContent          = def.pos;
-  document.getElementById('definition-text').textContent  = def.definition;
+  document.getElementById('definition-text').textContent  = cleanDef;
+  document.getElementById('sentence-text').textContent = sen ? display : '';
   document.getElementById('hints-revealed').innerHTML     = '';
   document.getElementById('feedback-text').textContent    = '';
   document.getElementById('feedback-text').className      = 'feedback-text';
 
+  givingUp = false;
+  hintsUsed = new Set();
+  
   const input = document.getElementById('answer-input');
   input.value     = '';
   input.className = 'answer-input';
+  input.disabled  = false;
 
   // Reset hint buttons
   ['letter','syllables','synonyms'].forEach(h => {
@@ -657,7 +699,7 @@ function updateProgress() {
 }
 
 // ── Hints ────────────────────────────────────────────────────
-const hintsUsed = new Set();
+let hintsUsed = new Set();
 
 function revealHint(type) {
   const clues = current.clues || {};
@@ -704,6 +746,8 @@ function submitAnswer() {
   const usedAHint = hintsUsed.size > 0;
 
   if (answer === correct) {
+    usedWords.add(current.word);
+    saveUsedWords();
     const pts = usedAHint ? POINTS_WITH_HINT : POINTS_NO_HINT;
     sessionScore += pts;
     allTimeScore += pts;
@@ -756,26 +800,35 @@ function endGame() {
 }
 
 // ── Give up ─────────────────────────────────────────────
+let givingUp = false;
+
 function giveUp() {
-  const input    = document.getElementById("answer-input");
-  const feedback = document.getElementById("feedback-text");
-  const btn      = document.getElementById("btn-giveup");
+  if (givingUp) return;
+  givingUp = true;
+
+  const feedback  = document.getElementById("feedback-text");
+  const input     = document.getElementById("answer-input");
 
   feedback.textContent = `The word was: ${current.word}`;
   feedback.className   = "feedback-text wrong";
   input.value          = current.word;
   input.className      = "answer-input wrong";
   input.disabled       = true;
-  btn.disabled         = true;
-  document.querySelector(".btn-primary").disabled = true;
-  hintsUsed.clear();
+
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('btn-giveup').disabled = true;
+
+  hintsUsed = new Set();
   wordIndex++;
+
   setTimeout(() => {
-    input.disabled = false;
-    document.querySelector(".btn-primary").disabled = false;
+    document.getElementById('btn-submit').disabled = false;
+    document.getElementById('btn-giveup').disabled = false;
+    givingUp = false;
     nextWord();
   }, 2000);
 }
+
 
 // ── Boot ─────────────────────────────────────────────────────
 loadWords();
